@@ -1,5 +1,8 @@
 package fr.lewon.dofus.fm.common;
 
+/**
+ * Represents a line in the Dofus FM tool
+ */
 public class FMLine {
 
 	private CaracType caracType;
