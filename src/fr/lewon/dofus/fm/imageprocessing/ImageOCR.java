@@ -1,17 +1,23 @@
 package fr.lewon.dofus.fm.imageprocessing;
 
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
+import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import fr.lewon.dofus.fm.common.CaracType;
+import net.sourceforge.tess4j.ITessAPI;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.Word;
 import nu.pattern.OpenCV;
 
 public enum ImageOCR {
@@ -20,39 +26,75 @@ public enum ImageOCR {
 
 	private ImageOCR() {}
 
-	public CaracType getCaracType(BufferedImage img) throws IOException{
-		Mat imgMat = matify(img);
-		Mat imgThresholdMat = new Mat();
-		Imgproc.threshold(imgMat, imgThresholdMat, 0, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C);
-		//		Imgcodecs.imwrite("test.jpg",imgThresholdMat);
+	public CaracType getCaracType(BufferedImage img) throws Exception{
+		Mat imgMat = img2Mat(img);
+		Imgproc.threshold(imgMat, imgMat, 60, 255, Imgproc.THRESH_BINARY);
+		Core.bitwise_not( imgMat, imgMat );
+		//Imgcodecs.imwrite("test.png",imgMat);
+		BufferedImage imgBuffered = Mat2BufferedImage(imgMat);
+
+		File outputfile = new File("image.jpg");
+		ImageIO.write(imgBuffered, "jpg", outputfile);
+
+		Tesseract tessInst = new Tesseract();
+		tessInst.setDatapath("Tess4J");
+		tessInst.setLanguage("eng");
+		tessInst.setPageSegMode(ITessAPI.TessPageSegMode.PSM_SINGLE_LINE);
+		tessInst.setOcrEngineMode(ITessAPI.TessOcrEngineMode.OEM_DEFAULT);
+		
+		String result=tessInst.doOCR(imgBuffered);
+		List<Word> words = tessInst.getWords(imgBuffered, ITessAPI.TessPageIteratorLevel.RIL_BLOCK);
+		
+		System.out.println(words);
+		
 		return null;
 	}
 
-	// Convert image to Mat
-	public Mat matify(BufferedImage im) {
-		// Convert INT to BYTE
-		//im = new BufferedImage(im.getWidth(), im.getHeight(),BufferedImage.TYPE_3BYTE_BGR);
-		// Convert bufferedimage to byte array
-		byte[] pixels = ((DataBufferByte) im.getRaster().getDataBuffer())
-				.getData();
+	protected BufferedImage Mat2BufferedImage(Mat matrix)throws Exception {        
+		MatOfByte mob=new MatOfByte();
+		Imgcodecs.imencode(".jpg", matrix, mob);
+		byte ba[]=mob.toArray();
 
-		// Create a Matrix the same size of image
-		Mat image = new Mat(im.getHeight(), im.getWidth(), CvType.CV_8UC3);
-		// Fill Matrix with image values
-		image.put(0, 0, pixels);
+		BufferedImage bi=ImageIO.read(new ByteArrayInputStream(ba));
+		return bi;
+	}
 
-		return image;
+	protected Mat img2Mat(BufferedImage in) {
+		Mat out;
+		byte[] data;
+		int r, g, b;
 
+		if (in.getType() == BufferedImage.TYPE_INT_RGB) {
+			out = new Mat(in.getHeight(), in.getWidth(), CvType.CV_8UC3);
+			data = new byte[in.getWidth() * in.getHeight() * (int) out.elemSize()];
+			int[] dataBuff = in.getRGB(0, 0, in.getWidth(), in.getHeight(), null, 0, in.getWidth());
+			for (int i = 0; i < dataBuff.length; i++) {
+				data[i * 3] = (byte) ((dataBuff[i] >> 0) & 0xFF);
+				data[i * 3 + 1] = (byte) ((dataBuff[i] >> 8) & 0xFF);
+				data[i * 3 + 2] = (byte) ((dataBuff[i] >> 16) & 0xFF);
+			}
+		} else {
+			out = new Mat(in.getHeight(), in.getWidth(), CvType.CV_8UC1);
+			data = new byte[in.getWidth() * in.getHeight() * (int) out.elemSize()];
+			int[] dataBuff = in.getRGB(0, 0, in.getWidth(), in.getHeight(), null, 0, in.getWidth());
+			for (int i = 0; i < dataBuff.length; i++) {
+				r = (byte) ((dataBuff[i] >> 0) & 0xFF);
+				g = (byte) ((dataBuff[i] >> 8) & 0xFF);
+				b = (byte) ((dataBuff[i] >> 16) & 0xFF);
+				data[i] = (byte) ((0.21 * r) + (0.71 * g) + (0.07 * b));
+			}
+		}
+		out.put(0, 0, data);
+		return out;
 	}
 
 	public static void main(String[] args){
-
 		OpenCV.loadShared();
-		BufferedImage img = null;
 		try {
-			img = ImageIO.read(new File("imgTest/vertSURrouge.png"));
-			ImageOCR.INSTANCE.getCaracType(img);
-		} catch (IOException e) {
+			int thresh = 60;
+			BufferedImage img1 = ImageIO.read(new File("imgTest/rougeSURgrisX2.png"));
+			ImageOCR.INSTANCE.getCaracType(img1);				
+		} catch (Exception e) {
 		}
 	}
 }
