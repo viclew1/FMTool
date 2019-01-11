@@ -8,17 +8,15 @@ import fr.lewon.dofus.fm.ihm.ConstantsLabels;
 import fr.lewon.dofus.fm.ihm.scenes.ScreenShotScene;
 import fr.lewon.ihm.builder.GenericPane;
 import javafx.event.ActionEvent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class ConfPane extends GenericPane {
 
-	private Rectangle fmArea;
+	private ScreenShotScene screenShotScene;
 	private Button selectFmAreaButton;
 	private Button showExampleButton;
 
@@ -29,8 +27,19 @@ public class ConfPane extends GenericPane {
 	@Override
 	protected Pane generateContent() {
 		GridPane pane = new GridPane();
+		
 		selectFmAreaButton = new Button(ConstantsLabels.SELECT_FM_AREA_LABEL);
 		showExampleButton = new Button(ConstantsLabels.SHOW_EXAMPLE_LABEL);
+		
+
+		Stage screenshotStage = new Stage();
+		screenshotStage.initModality(Modality.APPLICATION_MODAL);
+		screenshotStage.initOwner(getStage());
+		screenshotStage.setOpacity(0.5);
+		screenshotStage.setTitle(ConstantsLabels.SELECT_FM_AREA_LABEL);
+		screenShotScene = new ScreenShotScene(screenshotStage);
+		screenshotStage.setScene(screenShotScene);
+		
 		selectFmAreaButton.setOnAction((e) -> processSelectFmAreaAction(e));
 		showExampleButton.setOnAction((e) -> processShowExampleAction(e));
 
@@ -42,7 +51,7 @@ public class ConfPane extends GenericPane {
 	@Override
 	public List<String> checkErrors() {
 		List<String> errors = new ArrayList<>();
-		if (fmArea == null) {
+		if (screenShotScene.getFmArea() == null) {
 			errors.add(ConstantsErrors.NO_FM_AREA_ERROR);
 		}
 		return errors;
@@ -53,13 +62,7 @@ public class ConfPane extends GenericPane {
 	}
 
 	private void processSelectFmAreaAction(ActionEvent e) {
-		final Stage screenshotStage = new Stage();
-		screenshotStage.initModality(Modality.APPLICATION_MODAL);
-		screenshotStage.initOwner(getStage());
-		screenshotStage.setMaximized(true);
-		Scene screenshotScene = new ScreenShotScene(screenshotStage);
-		screenshotStage.setScene(screenshotScene);
-		screenshotStage.show();
+		screenShotScene.getStage().showAndWait();
 	}
 
 }
